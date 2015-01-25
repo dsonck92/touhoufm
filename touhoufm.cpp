@@ -21,7 +21,6 @@ TouHouFM::TouHouFM(QWidget *parent) :
 
     player = new QMediaPlayer(this);
 
-    player->setMedia(QMediaContent(QUrl("http://www.touhou.fm/m/touhou")));
 
     connect(ui->pushPlay,SIGNAL(pressed()),player,SLOT(play()));
     connect(ui->pushStop,SIGNAL(pressed()),player,SLOT(stop()));
@@ -60,6 +59,9 @@ TouHouFM::TouHouFM(QWidget *parent) :
 
     settings = new QSettings(this);
 
+    player->setMedia(QMediaContent(settings->value("url",QUrl("http://www.touhou.fm/m/touhou")).toUrl()));
+    infoUrl = settings->value("info",QUrl("http://touhou.fm/wp-content/plugins/touhou.fm-plugin/xml.php")).toUrl();
+
     if(settings->value("state","stopped") == "playing")
     {
         player->play();
@@ -82,8 +84,6 @@ TouHouFM::TouHouFM(QWidget *parent) :
     m_systray->show();
 
     connect(m_systray,SIGNAL(activated(QSystemTrayIcon::ActivationReason)),SLOT(systrayActivated(QSystemTrayIcon::ActivationReason)));
-
-    infoUrl = QUrl("http://touhou.fm/wp-content/plugins/touhou.fm-plugin/xml.php");
 }
 
 TouHouFM::~TouHouFM()
@@ -159,6 +159,10 @@ void TouHouFM::showRadios()
         infoUrl = info.info;
 
         ui->title->setText(QString("TouHou.FM Player - %1").arg(info.name));
+
+        settings->setValue("url",info.stream);
+        settings->setValue("info",info.info);
+
     }
 }
 
@@ -270,6 +274,9 @@ void TouHouFM::contextMenuEvent(QContextMenuEvent *event)
         infoUrl = info.info;
 
         ui->title->setText(QString("TouHou.FM Player - %1").arg(info.name));
+
+        settings->setValue("url",info.stream);
+        settings->setValue("info",info.info);
 
     }
 }
