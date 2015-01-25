@@ -1,0 +1,23 @@
+#-------------------------------------------------
+#
+# Project created by QtCreator 2015-01-24T14:23:02
+#
+#-------------------------------------------------
+
+QT       += core gui
+QT       += multimedia network xml
+greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
+
+TARGET = TouHouFM
+TEMPLATE = app
+
+
+SOURCES += main.cpp\
+        touhoufm.cpp
+
+HEADERS  += touhoufm.h
+
+FORMS    += touhoufm.ui
+
+RESOURCES += \
+    resource.qrc
