@@ -8,12 +8,15 @@
 
 #include <QNetworkReply>
 #include <QSettings>
+#include <QTimerEvent>
 
 TouHouFM::TouHouFM(QWidget *parent) :
     QFrame(parent),
     ui(new Ui::TouHouFM)
 {
     ui->setupUi(this);
+
+    retryId = -1;
 
     m_menu = new QMenu;
 
@@ -53,7 +56,8 @@ TouHouFM::TouHouFM(QWidget *parent) :
     connect(network, SIGNAL(finished(QNetworkReply*)),
             this, SLOT(replyFinished(QNetworkReply*)));
 
-    startTimer(5000);
+    downloadId = startTimer(5000);
+    startTimer(1000);
 
     network->get(QNetworkRequest(QUrl("http://touhou.fm/radios.xml")));
 
@@ -139,9 +143,11 @@ void TouHouFM::mediaStatusChanged(QMediaPlayer::MediaStatus status)
         break;
     case QMediaPlayer::EndOfMedia:
         ui->labelInfo->setText("Done!");
+        retryId = startTimer(3000);
         break;
     case QMediaPlayer::InvalidMedia:
         ui->labelInfo->setText("Invalid Media!");
+        retryId = startTimer(3000);
         break;
 
     }
@@ -163,6 +169,8 @@ void TouHouFM::showRadios()
         settings->setValue("url",info.stream);
         settings->setValue("info",info.info);
 
+        player->play();
+
     }
 }
 
@@ -176,7 +184,17 @@ void TouHouFM::replyFinished(QNetworkReply *reply)
     {
         QDomElement child = root.firstChildElement();
         while (!child.isNull()) {
-            metaDataChanged(child.tagName(),child.text());
+            if(child.tagName() == "progress")
+            {
+                speed = (child.text().toFloat() - progress);
+                progress = child.text().toFloat();
+                progress_auto = child.text().toFloat();
+            }
+            else
+            {
+                metaDataChanged(child.tagName(),child.text());
+            }
+
             child = child.nextSiblingElement();
         }
     }
@@ -245,6 +263,12 @@ void TouHouFM::metaDataChanged(QString field, QVariant value)
                                .arg(meta.value("Album",QString("~")).toString())
                                .arg(meta.value("AlbumArtist",QString("~")).toString()));
     }
+
+    if(field == "progress")
+    {
+
+        ui->progress->setValue(value.toFloat());
+    }
 }
 
 void TouHouFM::systrayActivated(QSystemTrayIcon::ActivationReason reason)
@@ -278,11 +302,28 @@ void TouHouFM::contextMenuEvent(QContextMenuEvent *event)
         settings->setValue("url",info.stream);
         settings->setValue("info",info.info);
 
+        player->play();
+
     }
 }
 
 void TouHouFM::timerEvent(QTimerEvent *event)
 {
-    network->get(QNetworkRequest(infoUrl));
 
+    if(event->timerId() == downloadId)
+    {
+        network->get(QNetworkRequest(infoUrl));
+
+    }
+    else if(event->timerId() == retryId)
+    {
+        player->play();
+        killTimer(retryId);
+    }
+    else
+    {
+        progress_auto += speed/5.0;
+        metaDataChanged("progress",progress_auto);
+
+    }
 }

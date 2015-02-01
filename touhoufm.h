@@ -27,6 +27,8 @@ class TouHouFM : public QFrame
 {
     Q_OBJECT
 
+    int downloadId, retryId;
+
     QMediaPlayer *player;
 
     QUrl infoUrl;
@@ -43,6 +45,8 @@ class TouHouFM : public QFrame
     QMenu *m_menu,*m_radios;
 
     QSystemTrayIcon *m_systray;
+
+    qreal progress, progress_auto, speed;
 
 public:
     explicit TouHouFM(QWidget *parent = 0);
