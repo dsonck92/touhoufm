@@ -10,12 +10,10 @@
 #include <QDomDocument>
 #include <QSystemTrayIcon>
 #include <QAudioProbe>
+#include <QBitmap>
 
 class QSettings;
-
-namespace Ui {
-class TouHouFM;
-}
+class QWebSocket;
 
 struct RadioInfo
 {
@@ -47,6 +45,23 @@ class TouHouFM : public QFrame
     QSystemTrayIcon *m_systray;
 
     qreal progress, progress_auto, speed;
+    QTime m_last;
+
+    QPixmap m_pBackground;
+    QPixmap m_pStop,m_pPlay;
+    QBitmap m_bMask;
+
+    QWebSocket *m_wsInfo;
+
+    QString m_sInfo;
+
+    QFont m_f;
+
+    qreal m_rProgress;
+
+    QMediaPlayer::State m_status;
+
+    QRectF m_statusTextSize;
 
 public:
     explicit TouHouFM(QWidget *parent = 0);
@@ -59,6 +74,8 @@ private slots:
     void replyFinished(QNetworkReply* reply);
     void systrayActivated(QSystemTrayIcon::ActivationReason reason);
     void showRadios();
+    void sendRequest();
+    void handleMessage(QString info);
 
 private:
     void mousePressEvent(QMouseEvent *event);
@@ -66,11 +83,12 @@ private:
     void mouseReleaseEvent(QMouseEvent *event);
     void contextMenuEvent(QContextMenuEvent * event);
     void timerEvent(QTimerEvent *event);
+    void resizeEvent(QResizeEvent *event);
+    void paintEvent(QPaintEvent *);
     int m_nMouseClick_X_Coordinate;
     int m_nMouseClick_Y_Coordinate;
     bool m_nMove;
 
-    Ui::TouHouFM *ui;
 };
 
 #endif // TOUHOUFM_H

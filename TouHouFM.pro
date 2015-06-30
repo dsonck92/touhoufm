@@ -5,7 +5,7 @@
 #-------------------------------------------------
 
 QT       += core gui
-QT       += multimedia network xml
+QT       += multimedia network xml websockets
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 TARGET = TouHouFM
@@ -17,7 +17,7 @@ SOURCES += main.cpp\
 
 HEADERS  += touhoufm.h
 
-FORMS    += touhoufm.ui
+FORMS    +=
 
 RESOURCES += \
     resource.qrc
