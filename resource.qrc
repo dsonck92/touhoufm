@@ -1,9 +1,6 @@
 <RCC>
     <qresource prefix="/images">
         <file>icon.png</file>
-        <file>close.png</file>
-        <file>background.png</file>
-        <file>play.png</file>
-        <file>stop.png</file>
+        <file>desktop-player.svg</file>
     </qresource>
 </RCC>

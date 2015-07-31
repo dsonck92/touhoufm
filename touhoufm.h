@@ -4,12 +4,12 @@
 #include <QFrame>
 #include <QMediaPlayer>
 #include <QMouseEvent>
+#include <QWheelEvent>
 #include <QContextMenuEvent>
 #include <QMenu>
 #include <QNetworkAccessManager>
 #include <QDomDocument>
 #include <QSystemTrayIcon>
-#include <QAudioProbe>
 #include <QBitmap>
 
 class QSettings;
@@ -25,69 +25,118 @@ class TouHouFM : public QFrame
 {
     Q_OBJECT
 
-    int downloadId, retryId;
+    // Timer id's
+    int downloadId;
+    int retryId;
+    int animationId;
 
-    QMediaPlayer *player;
+    // QtAV objects
+    QMediaPlayer *play;
 
-    QUrl infoUrl;
-
-    QNetworkAccessManager *network;
-
-    QDomDocument meta_info;
-
-    QMap<QString, QVariant> meta;
-    QMap<QAction*, RadioInfo> radio_data;
-
+    // Settings object to store permanent options
     QSettings *settings;
 
+    // Menu objects
     QMenu *m_menu,*m_radios;
 
+    // Systemtray icon
     QSystemTrayIcon *m_systray;
 
-    qreal progress, progress_auto, speed;
+    // Progress state
+    qreal progress;
+
+    // Last check time
     QTime m_last;
 
-    QPixmap m_pBackground;
-    QPixmap m_pStop,m_pPlay;
+    // Skin pixmaps
+    QMap<QString,QRectF> m_areas;
+    QMap<QString,QPixmap> m_pixmaps;
+
+    // Rate bar
+    QRect m_rRatebar;
+    QSize m_sRateStar;
+
+    // window shape
     QBitmap m_bMask;
 
+    // Information channel
     QWebSocket *m_wsInfo;
 
+    // Status texts
     QString m_sInfo;
+    QString m_sStatus;
+    QString m_sTime;
+    QVariantMap meta;
 
-    QFont m_f;
 
+    // Auth token
+    QString m_sAuth;
+
+    // Font
+    QFont m_f,m_f2;
+
+    // progress state
     qreal m_rProgress;
 
-    QMediaPlayer::State m_status;
+    // Radios
+    QMap<QAction*, RadioInfo> radio_data;
 
-    QRectF m_statusTextSize;
+    // Rating options
+    QStringList m_slRate;
+
+    // Report "what is wrong" options
+    QStringList m_slWhats;
+
+    // Rating
+    int m_iRating;
+    qreal m_fAverageRating,m_fGlobalRating;
 
 public:
     explicit TouHouFM(QWidget *parent = 0);
     ~TouHouFM();
 
 private slots:
-    void stateChanged(QMediaPlayer::State state);
+    // Handles changes in mediastatus
     void mediaStatusChanged(QMediaPlayer::MediaStatus status);
+    // Handles updates in meta data
     void metaDataChanged(QString field,QVariant value);
-    void replyFinished(QNetworkReply* reply);
+    // handle systemtray interaction
     void systrayActivated(QSystemTrayIcon::ActivationReason reason);
+    // Show possible radio stations menu
     void showRadios();
+    // send request new songinfo
     void sendRequest();
+    // submit user rating
+    void sendRating(int rating);
+    // handle websocket info message
     void handleMessage(QString info);
+    // update volume display
+    void volumeChanged(qreal vol);
+    // show report dialog and submit
+    void report();
+    // attempt to login
+    void login();
+
+//    void calculateFFT(QByteArray buff);
 
 private:
+    // custom mouse handlers
     void mousePressEvent(QMouseEvent *event);
     void mouseMoveEvent(QMouseEvent *event);
     void mouseReleaseEvent(QMouseEvent *event);
+    void wheelEvent(QWheelEvent *event);
+    // custom context menu handler
     void contextMenuEvent(QContextMenuEvent * event);
+    // custom timer events
     void timerEvent(QTimerEvent *event);
+    // custom resize event
     void resizeEvent(QResizeEvent *event);
+    // custom drawing
     void paintEvent(QPaintEvent *);
-    int m_nMouseClick_X_Coordinate;
-    int m_nMouseClick_Y_Coordinate;
-    bool m_nMove;
+    // last mouseclick pos
+    QPoint m_pMouseClick, m_pMouse;
+    // mouse press target
+    int m_nTarget;
 
 };
 
