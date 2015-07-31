@@ -8,7 +8,6 @@
 #include <QContextMenuEvent>
 #include <QMenu>
 #include <QNetworkAccessManager>
-#include <QDomDocument>
 #include <QSystemTrayIcon>
 #include <QBitmap>
 

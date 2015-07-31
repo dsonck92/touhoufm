@@ -5,7 +5,7 @@
 #-------------------------------------------------
 
 QT       += core gui
-QT       += network xml websockets multimedia
+QT       += websockets multimedia
 QT       += svg
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -21,7 +21,6 @@ HEADERS  += touhoufm.h \
     report.h
 
 FORMS    += \
-    authorize.ui \
     report.ui
 
 RESOURCES += \
