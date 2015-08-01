@@ -10,6 +10,13 @@ QT       += svg
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 TARGET = TouHouFM
+
+isEmpty(PREFIX) {
+  PREFIX="/usr/local"
+}
+
+target.path = $$PREFIX/bin
+
 TEMPLATE = app
 
 
@@ -25,3 +32,6 @@ FORMS    += \
 
 RESOURCES += \
     resource.qrc
+
+
+INSTALLS += target
