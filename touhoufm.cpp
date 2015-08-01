@@ -124,7 +124,7 @@ TouHouFM::TouHouFM(QWidget *parent) :
     startTimer(1000);
 
 
-    play->setMedia(QMediaContent(settings->value("url",QUrl("http://en.touhou.fm:8010/touhou.mp3")).toUrl()));
+    play->setMedia(QMediaContent(QUrl("http://en.touhou.fm:8010/touhou.mp3")));
 
     //player->setMedia(QMediaContent(settings->value("url",QUrl("http://en.touhou.fm:8010/touhou.mp3")).toUrl()));
 
