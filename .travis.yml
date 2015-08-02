@@ -1,9 +1,6 @@
 language: cpp
 compiler: gcc
 sudo: required
-matrix:
-    include:
-        - os: osx
 before_install:
     - sh ${TRAVIS_BUILD_DIR}/.travis/${TRAVIS_OS_NAME}.${TARGET_OS}.before_install.sh
 install:
