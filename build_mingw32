@@ -1,0 +1,10 @@
+#!/bin/sh
+
+MINGW=/opt/mingw32
+export PATH=$PATH:$MINGW/bin
+#export CFLAGS="-march=pentium3 -mtune=generic -mpreferred-stack-boundary=5 -fno-tree-vectorize"
+export CFLAGS="-march=pentium3 -mtune=generic -mpreferred-stack-boundary=5"
+export CXXFLAGS="$CFLAGS"
+
+qmake ../TouHouFM-mingw.pro -spec win32-x-g++
+
