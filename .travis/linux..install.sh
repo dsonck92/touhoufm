@@ -1,10 +1,3 @@
-PACKAGES=""
-
-if [ $QT5 ]
-then
-	PACKAGES="$PACKAGES qtbase5-dev"
-else
-	PACKAGES="$PACKAGES libqt4-dev"
-fi
+PACKAGES="qtbase5-dev qtmultimedia5-dev qtwebsockets5-dev"
 
 sudo apt-get install -y $PACKAGES
