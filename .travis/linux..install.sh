@@ -12,7 +12,7 @@ LASTDIR=$(pwd)
   cd qt5
   git checkout 5.4
   perl init-repository --no-webkit --module-subset=qtbase,qtwebsockets,qtmultimedia,qtwidgets,qtsvg
-  ./configure -developer-build -opensource -nomake examples -nomake tests -confirm-license
+  ./configure -prefix /usr -opensource -nomake examples -nomake tests -confirm-license
   make -j2
 
   sudo make install
