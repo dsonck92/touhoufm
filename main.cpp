@@ -9,7 +9,7 @@ int main(int argc, char *argv[])
     a.setOrganizationName("TouHou.FM");
     a.setOrganizationDomain("touhou.fm");
     a.setApplicationName("TouHou.FM Player");
-    a.setApplicationVersion("1.0");
+    a.setApplicationVersion("0.9");
 
     // Create the main window
     TouHouFM w;
