@@ -1,4 +1,4 @@
-# TouHouFM [![Build Status](https://travis-ci.org/LMMS/lmms.png)](https://travis-ci.org/LMMS/lmms)
+# TouHouFM [![Build Status](https://travis-ci.org/dsonck92/touhoufm.png)](https://travis-ci.org/dsonck92/touhoufm)
 TouHou.FM Player
 
 A multi-platform desktop radio player for http://touhou.fm/
