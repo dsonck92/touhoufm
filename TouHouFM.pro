@@ -22,10 +22,12 @@ TEMPLATE = app
 
 SOURCES += main.cpp\
         touhoufm.cpp \
-    report.cpp
+    report.cpp \
+    touhoufmsocket.cpp
 
 HEADERS  += touhoufm.h \
-    report.h
+    report.h \
+    touhoufmsocket.h
 
 FORMS    += \
     report.ui

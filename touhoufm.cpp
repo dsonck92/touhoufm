@@ -107,10 +107,11 @@ TouHouFM::TouHouFM(QWidget *parent) :
 
     m_menu->addAction("Play",play,SLOT(play()));
     m_menu->addAction("Stop",play,SLOT(stop()));
-    m_menu->addAction("Report",this,SLOT(report()));
-    m_menu->addAction("Login",this,SLOT(login()));
     m_menu->addSeparator();
-    m_radios = m_menu->addMenu("Radios");
+    m_menu->addAction("Report",this,SLOT(report()));
+    m_menu->addAction("Skip",this,SLOT(skip()));
+    m_menu->addSeparator();
+    m_menu->addAction("Login",this,SLOT(login()));
     m_menu->addSeparator();
     m_menu->addAction("Show",this,SLOT(show()));
     m_menu->addAction("Minimize",this,SLOT(showMinimized()));
@@ -225,31 +226,6 @@ void TouHouFM::mediaStatusChanged(QMediaPlayer::MediaStatus status)
     m_last = QTime::currentTime();
     update();
 }
-
-void TouHouFM::showRadios()
-{
-    QAction *act = m_radios->exec(mapToGlobal(QPoint(0, 0)));
-
-    qDebug() << "Selected: " << act;
-
-    if(act && radio_data.contains(act))
-    {
-        RadioInfo info = radio_data.value(act);
-
-
-        qDebug() << "Playing: " << info.stream.toString();
-
-        play->setMedia(info.stream);
-
-        //        ui->title->setText(QString("TouHou.FM Player - %1").arg(info.name));
-
-        settings->setValue("url",info.stream);
-
-        play->play();
-
-    }
-}
-
 
 void TouHouFM::mousePressEvent(QMouseEvent *event) {
     m_pMouseClick = event->pos();
@@ -387,21 +363,8 @@ void TouHouFM::systrayActivated(QSystemTrayIcon::ActivationReason reason)
 
 void TouHouFM::contextMenuEvent(QContextMenuEvent *event)
 {
-    QAction *act = m_menu->exec(event->globalPos());
+    m_menu->exec(event->globalPos());
 
-    if(act && radio_data.contains(act))
-    {
-        RadioInfo info = radio_data.value(act);
-
-        play->setMedia(info.stream);
-
-        //        ui->title->setText(QString("TouHou.FM Player - %1").arg(info.name));
-
-        settings->setValue("url",info.stream);
-
-        play->play();
-
-    }
 }
 
 void TouHouFM::timerEvent(QTimerEvent *event)
@@ -671,6 +634,16 @@ void TouHouFM::report()
 
         m_wsInfo->sendTextMessage(QJsonDocument::fromVariant(msg).toJson());
     }
+}
+
+void TouHouFM::sendSkip()
+{
+    qDebug() << "Sending skip";
+    QVariantMap msg;
+
+    msg.insert("type","skip");
+
+    m_wsInfo->sendTextMessage(QJsonDocument::fromVariant(msg).toJson());
 }
 
 void TouHouFM::login()

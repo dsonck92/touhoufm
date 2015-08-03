@@ -1,6 +1,8 @@
 #ifndef TOUHOUFM_H
 #define TOUHOUFM_H
 
+#include "touhoufmsocket.h"
+
 #include <QFrame>
 #include <QMediaPlayer>
 #include <QMouseEvent>
@@ -18,7 +20,7 @@ struct RadioInfo
 {
     QString name;
     QUrl    stream, info;
-};
+}  __attribute__((deprecated));
 
 class TouHouFM : public QFrame
 {
@@ -36,7 +38,7 @@ class TouHouFM : public QFrame
     QSettings *settings;
 
     // Menu objects
-    QMenu *m_menu,*m_radios;
+    QMenu *m_menu;
 
     // Systemtray icon
     QSystemTrayIcon *m_systray;
@@ -58,8 +60,9 @@ class TouHouFM : public QFrame
     // window shape
     QBitmap m_bMask;
 
-    // Information channel
-    QWebSocket *m_wsInfo;
+    // TouhouFM connection
+    TouhouFMSocket *m_sInfo;
+
 
     // Status texts
     QString m_sInfo;
@@ -68,17 +71,11 @@ class TouHouFM : public QFrame
     QVariantMap meta;
 
 
-    // Auth token
-    QString m_sAuth;
-
     // Font
     QFont m_f,m_f2;
 
     // progress state
     qreal m_rProgress;
-
-    // Radios
-    QMap<QAction*, RadioInfo> radio_data;
 
     // Rating options
     QStringList m_slRate;
@@ -101,12 +98,12 @@ private slots:
     void metaDataChanged(QString field,QVariant value);
     // handle systemtray interaction
     void systrayActivated(QSystemTrayIcon::ActivationReason reason);
-    // Show possible radio stations menu
-    void showRadios();
     // send request new songinfo
     void sendRequest();
     // submit user rating
     void sendRating(int rating);
+    // send skip request
+    void sendSkip();
     // handle websocket info message
     void handleMessage(QString info);
     // update volume display
