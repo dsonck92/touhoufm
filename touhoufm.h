@@ -1,6 +1,8 @@
 #ifndef TOUHOUFM_H
 #define TOUHOUFM_H
 
+#include "touhoufmsocket.h"
+
 #include <QFrame>
 #include <QMediaPlayer>
 #include <QMouseEvent>
@@ -18,7 +20,7 @@ struct RadioInfo
 {
     QString name;
     QUrl    stream, info;
-};
+}  __attribute__((deprecated));
 
 class TouHouFM : public QFrame
 {
@@ -36,7 +38,9 @@ class TouHouFM : public QFrame
     QSettings *settings;
 
     // Menu objects
-    QMenu *m_menu,*m_radios;
+    QMenu *m_menu;
+
+    QMap<QAction*,QString> m_skinAssoc;
 
     // Systemtray icon
     QSystemTrayIcon *m_systray;
@@ -58,8 +62,9 @@ class TouHouFM : public QFrame
     // window shape
     QBitmap m_bMask;
 
-    // Information channel
-    QWebSocket *m_wsInfo;
+    // TouhouFM connection
+    TouhouFMSocket *m_sockInfo;
+
 
     // Status texts
     QString m_sInfo;
@@ -68,23 +73,15 @@ class TouHouFM : public QFrame
     QVariantMap meta;
 
 
-    // Auth token
-    QString m_sAuth;
-
     // Font
     QFont m_f,m_f2;
 
     // progress state
     qreal m_rProgress;
 
-    // Radios
-    QMap<QAction*, RadioInfo> radio_data;
-
     // Rating options
     QStringList m_slRate;
 
-    // Report "what is wrong" options
-    QStringList m_slWhats;
 
     // Rating
     int m_iRating;
@@ -101,20 +98,34 @@ private slots:
     void metaDataChanged(QString field,QVariant value);
     // handle systemtray interaction
     void systrayActivated(QSystemTrayIcon::ActivationReason reason);
-    // Show possible radio stations menu
-    void showRadios();
     // send request new songinfo
     void sendRequest();
     // submit user rating
     void sendRating(int rating);
-    // handle websocket info message
-    void handleMessage(QString info);
+    // send skip request
+    void sendSkip();
     // update volume display
     void volumeChanged(qreal vol);
     // show report dialog and submit
     void report();
     // attempt to login
     void login();
+
+    void newProgress(qreal progress) { m_rProgress = progress; update(); }
+    void newTime(QString time) { m_sTime = time; update(); }
+
+    void newRating(int rating) { m_iRating = rating; update(); }
+    void newGlobalRating(qreal rating) { m_fGlobalRating = rating; update(); }
+
+    void storeAuthToken(QString token);
+
+    void showUrl(QUrl url);
+
+    void showNotification(QString type, QString text);
+
+    void loadSkin(QString path);
+
+    void handleAction(QAction *action);
 
 //    void calculateFFT(QByteArray buff);
 

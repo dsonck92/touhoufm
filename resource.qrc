@@ -1,6 +1,9 @@
 <RCC>
     <qresource prefix="/images">
         <file>icon.png</file>
-        <file>desktop-player.svg</file>
+    </qresource>
+    <qresource prefix="/skins">
+        <file>reimu.svg</file>
+        <file>streaming.svg</file>
     </qresource>
 </RCC>

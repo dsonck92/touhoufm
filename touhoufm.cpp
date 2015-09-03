@@ -2,7 +2,6 @@
 #include "touhoufm.h"
 
 #include <QMessageBox>
-#include <QJsonDocument>
 
 #include <QMenu>
 #include <QWebSocket>
@@ -18,6 +17,7 @@
 
 #include <QSvgRenderer>
 #include <QDesktopServices>
+#include <QDir>
 
 #include <cmath>
 
@@ -33,84 +33,61 @@ enum ClientMessages {
 TouHouFM::TouHouFM(QWidget *parent) :
     QFrame(parent)
 {
+    // Create an settings object to store persistent settings
     settings = new QSettings(this);
 
+    // Initialize the rating to "unrated"
     m_iRating = -1;
 
+    // Enable mouse tracking for hover effects
     setMouseTracking(true);
 
-    m_sAuth = settings->value("authtoken").toString();
+    // Create a socket to talk to TouHouFM
+    m_sockInfo = new TouhouFMSocket(settings->value("authtoken").toString(),this);
 
+    // Connect the necessary signals to handle TouHouFM info
+    connect(m_sockInfo,SIGNAL(newApprovedAuthToken(QString)),SLOT(storeAuthToken(QString)));
+    connect(m_sockInfo,SIGNAL(grantingRequired(QUrl)),SLOT(showUrl(QUrl)));
+    connect(m_sockInfo,SIGNAL(newNotification(QString,QString)),SLOT(showNotification(QString,QString)));
+    connect(m_sockInfo,SIGNAL(metaDataChanged(QString,QVariant)),SLOT(metaDataChanged(QString,QVariant)));
+    connect(m_sockInfo,SIGNAL(newProgress(qreal)),SLOT(newProgress(qreal)));
+    connect(m_sockInfo,SIGNAL(newTime(QString)),SLOT(newTime(QString)));
+    connect(m_sockInfo,SIGNAL(newUserRating(int)),SLOT(newRating(int)));
+    connect(m_sockInfo,SIGNAL(newGlobalRating(qreal)),SLOT(newGlobalRating(qreal)));
+
+    // Initialize the ratings options TODO: Should be handled through TouHouFM to sync between client and site
     m_slRate << "Awful" << "Terrible" << "Bad" << "Neutral" << "Good" << "Nice" << "Awesome";
 
-
+    // Last status message time set to now
     m_last = QTime::currentTime();
 
-    QSvgRenderer r(QString(":/images/desktop-player.svg"),this);
-
-    {
-        QStringList items;
-
-        items << "time" << "info" << "rating" << "playpause" << "volume" << "volume-inner" << "report";
-
-        foreach(QString item, items)
-        {
-            m_areas[item] = r.boundsOnElement("rect-"+item);
-        }
-    }
-
-    {
-        QStringList items;
-        items << "background" << "play" << "stop" << "volume" << "volume-mute" << "rating" << "arrow" << "report";
-
-        foreach(QString item, items)
-        {
-            QRectF rc = r.boundsOnElement(item);
-            m_pixmaps[item] = QPixmap(rc.size().toSize());
-            m_pixmaps[item].fill(QColor(0,0,0,0));
-
-            QPainter p2(&m_pixmaps[item]);
-            r.render(&p2,item);
-        }
-    }
-
-    m_sRateStar = m_pixmaps["rating"].size();
-    m_sRateStar.rwidth()  /= 7;
-    m_sRateStar.rheight() /= 2;
-
-    m_bMask = m_pixmaps["background"].mask();
-
-    setMinimumSize(m_pixmaps["background"].size());
-    setMaximumSize(m_pixmaps["background"].size());
+    // Load the current skin
+    loadSkin(settings->value("skin",QString(":/skins/reimu.svg")).toString());
     //    ui->setupUi(this);
 
     retryId = -1;
 
-    m_menu = new QMenu;
-
+    // Mouse target variable
     m_nTarget = 0;
 
+    // Initialize mediaplayer
     play = new QMediaPlayer(this);
 
-    //    BufferOutput *fout = new BufferOutput();
-
-    //    connect(fout,SIGNAL(newBuffer(QByteArray)),SLOT(calculateFFT(QByteArray)));
-
-    //    play->setAudioOutput(fout);
-
-
-    //    connect(player,SIGNAL(volumeChanged(int)),ui->sliderVolume,SLOT(setValue(int)));
-    //    connect(player,SIGNAL(mutedChanged(bool)),ui->pushMute,SLOT(setChecked(bool)));
+    // Connect the status signal to notify about media states and errors
     connect(play,SIGNAL(mediaStatusChanged(QMediaPlayer::MediaStatus)),SLOT(mediaStatusChanged(QMediaPlayer::MediaStatus)));
 
-    //    connect(player,SIGNAL(bufferStatusChanged(int)),ui->progress,SLOT(setValue(int)));
+    // Create context menu
+    m_menu = new QMenu;
 
     m_menu->addAction("Play",play,SLOT(play()));
     m_menu->addAction("Stop",play,SLOT(stop()));
+    m_menu->addSeparator();
     m_menu->addAction("Report",this,SLOT(report()));
+    m_menu->addAction("Skip",m_sockInfo,SLOT(skipSong()));
+    m_menu->addSeparator();
     m_menu->addAction("Login",this,SLOT(login()));
     m_menu->addSeparator();
-    m_radios = m_menu->addMenu("Radios");
+    QMenu * smenu = m_menu->addMenu("Skin");
     m_menu->addSeparator();
     m_menu->addAction("Show",this,SLOT(show()));
     m_menu->addAction("Minimize",this,SLOT(showMinimized()));
@@ -118,20 +95,42 @@ TouHouFM::TouHouFM(QWidget *parent) :
     m_menu->addSeparator();
     m_menu->addAction("Quit",this,SLOT(close()));
 
+    // List all available skins
+    QDir d(":/skins/");
+
+    QStringList skins = d.entryList(QStringList() << "*.svg");
+
+    foreach(QString skin, skins)
+    {
+        m_skinAssoc[smenu->addAction(skin)] = ":/skins/"+skin;
+    }
+
+    smenu->addSeparator();
+
+    d.setPath("skins/");
+
+    skins = d.entryList(QStringList() << "*.svg");
+
+    foreach(QString skin, skins)
+    {
+        m_skinAssoc[smenu->addAction(skin)] = "skins/"+skin;
+    }
+
+    // Set the preferred window type, frameless
     setWindowFlags(Qt::Window | Qt::FramelessWindowHint);
 
-    downloadId = startTimer(5000);
+    // Do a default 1fps refresh
     startTimer(1000);
 
-
+    // Load the default url TODO: handle this by querying TouHouFM about actual stream urls
     play->setMedia(QMediaContent(QUrl("http://en.touhou.fm:8010/touhou.mp3")));
 
-    //player->setMedia(QMediaContent(settings->value("url",QUrl("http://en.touhou.fm:8010/touhou.mp3")).toUrl()));
-
+    // If the user kept the state in playing, resume playback on creation
     if(settings->value("state","stopped") == "playing")
     {
         play->play();
     }
+    // If the user hid the window before closing, return hidden
     if(settings->value("shown",true).toBool())
     {
         show();
@@ -141,6 +140,7 @@ TouHouFM::TouHouFM(QWidget *parent) :
         hide();
     }
 
+    // Go into the systemtray
     m_systray = new QSystemTrayIcon(this);
 
     m_systray->setContextMenu(m_menu);
@@ -148,20 +148,11 @@ TouHouFM::TouHouFM(QWidget *parent) :
     setWindowIcon(QIcon(":/images/icon.png"));
     m_systray->show();
 
+    // Handle various interactions with the systemtray
     connect(m_systray,SIGNAL(activated(QSystemTrayIcon::ActivationReason)),SLOT(systrayActivated(QSystemTrayIcon::ActivationReason)));
+    connect(smenu,SIGNAL(triggered(QAction*)),SLOT(handleAction(QAction*)));
 
-    m_wsInfo = new QWebSocket(QString(),QWebSocketProtocol::VersionLatest, this);
-
-    connect(m_wsInfo,SIGNAL(connected()),SLOT(sendRequest()));
-    connect(m_wsInfo,SIGNAL(textMessageReceived(QString)),SLOT(handleMessage(QString)));
-
-    m_wsInfo->open(QUrl("ws://en.touhou.fm/wsapp/"));
-
-    m_f = m_f2 = font();
-    m_f.setPixelSize(m_areas["info"].height()*.8);
-    m_f2.setPixelSize(m_areas["time"].height()*.8);
-
-    //setAutoFillBackground(false);
+    // Create a semi transparent window
     setWindowOpacity(1.0);
     QPalette pal = palette();
     pal.setColor(backgroundRole(),QColor(0,0,0,0));
@@ -170,24 +161,25 @@ TouHouFM::TouHouFM(QWidget *parent) :
     setAttribute(Qt::WA_TranslucentBackground,true);
     setAttribute(Qt::WA_PaintOnScreen,false);
 
-    play->setVolume(settings->value("volume",play->volume()).toFloat()/100.0);
+    // Restore the volume of last session
+    play->setVolume(settings->value("volume",play->volume()).toInt());
 
+    // Create our animation timer
     animationId = startTimer(20);
     m_fAverageRating = 0;
 }
 
 TouHouFM::~TouHouFM()
 {
-    //   settings->setValue("volume",ui->sliderVolume->value());
-    //   settings->setValue("shown",isVisible());
     settings->setValue("volume",play->volume());
 
     //    delete ui;
-    m_wsInfo->deleteLater();
+    m_sockInfo->deleteLater();
 }
 
 void TouHouFM::mediaStatusChanged(QMediaPlayer::MediaStatus status)
 {
+    // Update the status message
     switch(status)
     {
     case QMediaPlayer::UnknownMediaStatus:
@@ -225,31 +217,6 @@ void TouHouFM::mediaStatusChanged(QMediaPlayer::MediaStatus status)
     m_last = QTime::currentTime();
     update();
 }
-
-void TouHouFM::showRadios()
-{
-    QAction *act = m_radios->exec(mapToGlobal(QPoint(0, 0)));
-
-    qDebug() << "Selected: " << act;
-
-    if(act && radio_data.contains(act))
-    {
-        RadioInfo info = radio_data.value(act);
-
-
-        qDebug() << "Playing: " << info.stream.toString();
-
-        play->setMedia(info.stream);
-
-        //        ui->title->setText(QString("TouHou.FM Player - %1").arg(info.name));
-
-        settings->setValue("url",info.stream);
-
-        play->play();
-
-    }
-}
-
 
 void TouHouFM::mousePressEvent(QMouseEvent *event) {
     m_pMouseClick = event->pos();
@@ -357,7 +324,7 @@ void TouHouFM::metaDataChanged(QString field, QVariant value)
 
     if(field == "progress")
     {
-
+        m_rProgress = value.toFloat();
         //        ui->progress->setValue(value.toFloat());
     }
     else if(field == "user-rating")
@@ -387,21 +354,7 @@ void TouHouFM::systrayActivated(QSystemTrayIcon::ActivationReason reason)
 
 void TouHouFM::contextMenuEvent(QContextMenuEvent *event)
 {
-    QAction *act = m_menu->exec(event->globalPos());
-
-    if(act && radio_data.contains(act))
-    {
-        RadioInfo info = radio_data.value(act);
-
-        play->setMedia(info.stream);
-
-        //        ui->title->setText(QString("TouHou.FM Player - %1").arg(info.name));
-
-        settings->setValue("url",info.stream);
-
-        play->play();
-
-    }
+    handleAction(m_menu->exec(event->globalPos()));
 }
 
 void TouHouFM::timerEvent(QTimerEvent *event)
@@ -429,10 +382,6 @@ void TouHouFM::timerEvent(QTimerEvent *event)
         {
             m_fAverageRating = m_fGlobalRating;
         }
-    }
-    if(m_wsInfo->state() == QAbstractSocket::UnconnectedState)
-    {
-        m_wsInfo->open(QUrl("ws://en.touhou.fm/wsapp/"));
     }
 }
 
@@ -470,7 +419,7 @@ void TouHouFM::paintEvent(QPaintEvent *)
     p.setOpacity(.5);
     p.setBrush(play->isMuted()?Qt::gray : Qt::white);
     p.setPen(Qt::NoPen);
-    p.drawPie(m_areas["volume-inner"],16.0*180.0-16.0*180.0*play->volume()/100,-(16.0*360.0-16.0*180.0*play->volume()/100));
+    p.drawPie(m_areas["volume-inner"],16.0*180.0-16.0*180.0*play->volume()/50,-(16.0*360.0-16.0*180.0*play->volume()/50));
 
     p.setOpacity(.75+.25*(m_areas["volume"].contains(m_pMouse)));
     if(!play->isMuted())
@@ -533,110 +482,22 @@ void TouHouFM::paintEvent(QPaintEvent *)
     {
         p.drawText(m_statusTextSize,text);
     }
-    p.setPen(QPen(Qt::red,2));
-    p.drawLine(QPointF(28+1,416-3),QPointF(28+1+(380-1-1-28)*m_rProgress/100.0,416-3));
+    p.setPen(QPen(QColor::fromRgb(0,64,128),2));
+    p.drawLine(renderRect.bottomLeft()+QPointF(1,-3),renderRect.bottomLeft()+QPointF(1+renderRect.width()*m_rProgress/100.0,-3));
 
     p.setPen(Qt::black);
     p.setFont(m_f2);
     p.setClipRect(m_areas["time"]);
     p.drawText(m_areas["time"],m_sTime);
-    //    for(int i = renderRect.left();i < renderRect.right();i++)
-    //    {
-    //p.drawLine(QPointF(i,renderRect.bottom()),QPointF(i,renderRect.bottom()-renderRect.height()*fo[i]));
-    //    }
 }
 
 void TouHouFM::sendRequest()
 {
-    qDebug() << "Sending request message";
-    QVariantMap msg;
-
-    msg.insert("type","request-info");
-
-    m_wsInfo->sendTextMessage(QJsonDocument::fromVariant(msg).toJson());
-    
-    login();
 }
 
 void TouHouFM::sendRating(int rating)
 {
-    qDebug() << "Sending rating";
-    QVariantMap msg;
-    
-    msg.insert("type","user-rating");
-    msg.insert("rating",rating-3);
-    
-    m_wsInfo->sendTextMessage(QJsonDocument::fromVariant(msg).toJson());
-}
-
-void TouHouFM::handleMessage(QString info)
-{
-    QVariantMap msg = QJsonDocument::fromJson(info.toUtf8()).toVariant().toMap();
-
-    QString type = msg.value("type").toString();
-    
-    if(!type.compare("song-info"))
-    {
-        QVariantMap tags = msg.value("tags").toMap();
-        foreach(QString key, tags.keys())
-        {
-            metaDataChanged(key,tags.value(key));
-        }
-    }
-    else if(!type.compare("progress"))
-    {
-        m_rProgress = msg.value("progress").toFloat();
-        m_sTime = msg.value("time").toString();
-        update();
-    }
-    else if(!type.compare("user-rating"))
-    {
-        m_iRating = msg.value("rating").toInt()+3;
-        update();
-    }
-    else if(!type.compare("what-options"))
-    {
-        m_slWhats = msg.value("options").toStringList();
-    }
-    else if(!type.compare("client-token"))
-    {
-        m_sAuth = msg.value("token").toString();
-
-        QVariantMap msg2;
-        msg2["type"] = "get-perms";
-        msg2["token"] = m_sAuth;
-        QStringList perms;
-        perms << "user.rating.submit";
-        msg2["perms"] = perms;
-
-        m_wsInfo->sendTextMessage(QJsonDocument::fromVariant(msg2).toJson());
-
-        settings->setValue("authtoken",m_sAuth);
-    }
-    else if(!type.compare("auth-url"))
-    {
-        QDesktopServices::openUrl(QUrl(msg["url"].toString()));
-
-        if(QMessageBox::question(this,"TouhouFM Radio","Please authorize and click Ok when ready.",QMessageBox::Ok,QMessageBox::NoButton) == QMessageBox::Ok)
-        {
-            login();
-        }
-    }
-    else if(!type.compare("auth-success"))
-    {
-        QMessageBox::information(this,"Touhou.FM Radio","Login succesful!");
-    }
-    else if(!type.compare("auth-failure"))
-    {
-        m_sAuth = QString();
-
-        login();
-    }
-    else if(!type.compare("notification"))
-    {
-        QVariantMap notif = msg.value("notification").toMap();
-        QMessageBox::information(this,"TouHou.FM Radio",notif.value("type").toString() + ": " + notif.value("text").toString());
-    }
+    m_sockInfo->rateSong(rating);
 }
 
 void TouHouFM::volumeChanged(qreal vol)
@@ -658,40 +519,101 @@ void TouHouFM::report()
     Report box("TouHou.FM",QString("Reporting %1 by %2 from %3 << %4 >>").arg(meta.value("Title",QString("~")).toString())
                .arg(meta.value("Artist",QString("~")).toString())
                .arg(meta.value("Album",QString("~")).toString())
-               .arg(meta.value("Circle",QString("~")).toString()),m_slWhats);
+               .arg(meta.value("Circle",QString("~")).toString()),m_sockInfo->getWhats());
 
     if(box.exec() == QDialog::Accepted)
     {
         qDebug() << "Sending report";
-        QVariantMap msg;
 
-        msg.insert("type","report");
-        msg.insert("what",box.getWhat());
-        msg.insert("detail",box.getDetail());
+        m_sockInfo->sendReport(box.getWhat(),box.getDetail());
 
-        m_wsInfo->sendTextMessage(QJsonDocument::fromVariant(msg).toJson());
     }
+}
+
+void TouHouFM::sendSkip()
+{
+    qDebug() << "Sending skip";
+    m_sockInfo->skipSong();
 }
 
 void TouHouFM::login()
 {
-    QVariantMap msg;
+    m_sockInfo->login();
 
-    if(m_sAuth.isEmpty())
+}
+
+void TouHouFM::storeAuthToken(QString token)
+{
+    settings->setValue("authtoken",token);
+}
+
+void TouHouFM::showUrl(QUrl url)
+{
+    QDesktopServices::openUrl(url);
+
+    if(QMessageBox::question(this,"TouhouFM Radio","Please authorize and click Ok when ready.",QMessageBox::Ok,QMessageBox::NoButton) == QMessageBox::Ok)
     {
-
-        msg.insert("type","get-token");
-        msg.insert("name","TouHou.FM Radio App");
-        msg.insert("description","The official desktop radio player.");
-
-        m_wsInfo->sendTextMessage(QJsonDocument::fromVariant(msg).toJson());
+        m_sockInfo->login();
     }
-    else
+
+}
+
+void TouHouFM::showNotification(QString type, QString text)
+{
+    QMessageBox::information(this,"TouHou.FM Radio",type + ": " + text);
+}
+
+void TouHouFM::loadSkin(QString path)
+{
+    QSvgRenderer r(path,this);
+
     {
-        msg.insert("type","auth-login");
-        msg.insert("token",m_sAuth);
+        QStringList items;
 
-        m_wsInfo->sendTextMessage(QJsonDocument::fromVariant(msg).toJson());
+        items << "time" << "info" << "rating" << "playpause" << "volume" << "volume-inner" << "report";
+
+        foreach(QString item, items)
+        {
+            m_areas[item] = r.boundsOnElement("rect-"+item);
+        }
     }
 
+    {
+        QStringList items;
+        items << "background" << "play" << "stop" << "volume" << "volume-mute" << "rating" << "arrow" << "report";
+
+        foreach(QString item, items)
+        {
+            QRectF rc = r.boundsOnElement(item);
+            m_pixmaps[item] = QPixmap(rc.size().toSize());
+            m_pixmaps[item].fill(QColor(0,0,0,0));
+
+            QPainter p2(&m_pixmaps[item]);
+            r.render(&p2,item);
+        }
+    }
+
+    m_sRateStar = m_pixmaps["rating"].size();
+    m_sRateStar.rwidth()  /= 7;
+    m_sRateStar.rheight() /= 2;
+
+    m_bMask = m_pixmaps["background"].mask();
+
+    setMinimumSize(m_pixmaps["background"].size());
+    setMaximumSize(m_pixmaps["background"].size());
+
+    m_f = m_f2 = font();
+    m_f.setPixelSize(m_areas["info"].height()*.8);
+    m_f2.setPixelSize(m_areas["time"].height()*.8);
+
+
+}
+
+void TouHouFM::handleAction(QAction *action)
+{
+    if(m_skinAssoc.contains(action))
+    {
+        loadSkin(m_skinAssoc[action]);
+        settings->setValue("skin",m_skinAssoc[action]);
+    }
 }

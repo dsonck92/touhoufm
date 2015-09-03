@@ -5,11 +5,12 @@ int main(int argc, char *argv[])
 {
     // Create the application object
     QApplication a(argc, argv);
+
     // Set the global application details like company and app name
     a.setOrganizationName("TouHou.FM");
     a.setOrganizationDomain("touhou.fm");
     a.setApplicationName("TouHou.FM Player");
-    a.setApplicationVersion("0.9");
+    a.setApplicationVersion("1.0");
 
     // Create the main window
     TouHouFM w;
