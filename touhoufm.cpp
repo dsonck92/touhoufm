@@ -114,7 +114,7 @@ TouHouFM::TouHouFM(QWidget *parent) :
 
     foreach(QString skin, skins)
     {
-        m_skinAssoc[smenu->addAction(skin)] = "skins/"+skin;
+        m_skinAssoc[smenu->addAction(skin)] = "/usr/share/touhoufm/skins/"+skin;
     }
 #endif
 
