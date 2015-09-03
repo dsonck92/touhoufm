@@ -47,6 +47,7 @@ TouHouFM::TouHouFM(QWidget *parent) :
     connect(m_sockInfo,SIGNAL(newProgress(qreal)),SLOT(newProgress(qreal)));
     connect(m_sockInfo,SIGNAL(newTime(QString)),SLOT(newTime(QString)));
     connect(m_sockInfo,SIGNAL(newUserRating(int)),SLOT(newRating(int)));
+    connect(m_sockInfo,SIGNAL(newGlobalRating(qreal)),SLOT(newGlobalRating(qreal)));
 
     m_slRate << "Awful" << "Terrible" << "Bad" << "Neutral" << "Good" << "Nice" << "Awesome";
 

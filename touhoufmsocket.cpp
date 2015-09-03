@@ -80,7 +80,7 @@ void TouhouFMSocket::handleMessage(QString info)
         {
             // Each tag is sent out as metaDataChanged
             if(key == "rating")
-                emit newGlobalRating(tags.value(key).toFloat());
+                emit newGlobalRating(tags.value(key).toFloat()+3.0);
             else
                 emit metaDataChanged(key,tags.value(key));
         }

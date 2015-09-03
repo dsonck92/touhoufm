@@ -113,6 +113,7 @@ private slots:
     void newTime(QString time) { m_sTime = time; update(); }
 
     void newRating(int rating) { m_iRating = rating; update(); }
+    void newGlobalRating(qreal rating) { m_fGlobalRating = rating; update(); }
 
     void storeAuthToken(QString token);
 
