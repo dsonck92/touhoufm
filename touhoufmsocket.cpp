@@ -2,10 +2,6 @@
 #include <QJsonDocument>
 
 
-/**
- * @brief TouhouFMSocket::TouhouFMSocket
- * @param parent
- */
 TouhouFMSocket::TouhouFMSocket(QString authToken, QObject *parent) : QObject(parent)
 {
     // Create the underlying websocket
@@ -21,10 +17,6 @@ TouhouFMSocket::TouhouFMSocket(QString authToken, QObject *parent) : QObject(par
     startTimer(1000);
 }
 
-/**
- * @brief TouhouFMSocket::setAuthToken
- * @param authToken
- */
 void TouhouFMSocket::setAuthToken(QString authToken)
 {
     m_sAuth = authToken;
@@ -64,10 +56,6 @@ void TouhouFMSocket::skipSong()
     m_wsInfo->sendTextMessage(QJsonDocument::fromVariant(msg).toJson());
 }
 
-/**
- * @brief TouhouFMSocket::open
- * @return
- */
 bool TouhouFMSocket::open()
 {
     // Open the websocket connection to the websocket address
@@ -76,10 +64,6 @@ bool TouhouFMSocket::open()
     return true;
 }
 
-/**
- * @brief TouhouFMSocket::handleMessage
- * @param info
- */
 void TouhouFMSocket::handleMessage(QString info)
 {
     // Get our message into QVariantMap form
