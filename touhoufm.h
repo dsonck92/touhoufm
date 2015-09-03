@@ -40,6 +40,8 @@ class TouHouFM : public QFrame
     // Menu objects
     QMenu *m_menu;
 
+    QMap<QAction*,QString> m_skinAssoc;
+
     // Systemtray icon
     QSystemTrayIcon *m_systray;
 
@@ -120,6 +122,10 @@ private slots:
     void showUrl(QUrl url);
 
     void showNotification(QString type, QString text);
+
+    void loadSkin(QString path);
+
+    void handleAction(QAction *action);
 
 //    void calculateFFT(QByteArray buff);
 

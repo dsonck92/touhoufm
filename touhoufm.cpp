@@ -17,6 +17,7 @@
 
 #include <QSvgRenderer>
 #include <QDesktopServices>
+#include <QDir>
 
 #include <cmath>
 
@@ -32,14 +33,19 @@ enum ClientMessages {
 TouHouFM::TouHouFM(QWidget *parent) :
     QFrame(parent)
 {
+    // Create an settings object to store persistent settings
     settings = new QSettings(this);
 
+    // Initialize the rating to "unrated"
     m_iRating = -1;
 
+    // Enable mouse tracking for hover effects
     setMouseTracking(true);
 
+    // Create a socket to talk to TouHouFM
     m_sockInfo = new TouhouFMSocket(settings->value("authtoken").toString(),this);
 
+    // Connect the necessary signals to handle TouHouFM info
     connect(m_sockInfo,SIGNAL(newApprovedAuthToken(QString)),SLOT(storeAuthToken(QString)));
     connect(m_sockInfo,SIGNAL(grantingRequired(QUrl)),SLOT(showUrl(QUrl)));
     connect(m_sockInfo,SIGNAL(newNotification(QString,QString)),SLOT(showNotification(QString,QString)));
@@ -49,47 +55,14 @@ TouHouFM::TouHouFM(QWidget *parent) :
     connect(m_sockInfo,SIGNAL(newUserRating(int)),SLOT(newRating(int)));
     connect(m_sockInfo,SIGNAL(newGlobalRating(qreal)),SLOT(newGlobalRating(qreal)));
 
+    // Initialize the ratings options TODO: Should be handled through TouHouFM to sync between client and site
     m_slRate << "Awful" << "Terrible" << "Bad" << "Neutral" << "Good" << "Nice" << "Awesome";
 
-
+    // Last status message time set to now
     m_last = QTime::currentTime();
 
-    QSvgRenderer r(QString(":/images/desktop-player.svg"),this);
-
-    {
-        QStringList items;
-
-        items << "time" << "info" << "rating" << "playpause" << "volume" << "volume-inner" << "report";
-
-        foreach(QString item, items)
-        {
-            m_areas[item] = r.boundsOnElement("rect-"+item);
-        }
-    }
-
-    {
-        QStringList items;
-        items << "background" << "play" << "stop" << "volume" << "volume-mute" << "rating" << "arrow" << "report";
-
-        foreach(QString item, items)
-        {
-            QRectF rc = r.boundsOnElement(item);
-            m_pixmaps[item] = QPixmap(rc.size().toSize());
-            m_pixmaps[item].fill(QColor(0,0,0,0));
-
-            QPainter p2(&m_pixmaps[item]);
-            r.render(&p2,item);
-        }
-    }
-
-    m_sRateStar = m_pixmaps["rating"].size();
-    m_sRateStar.rwidth()  /= 7;
-    m_sRateStar.rheight() /= 2;
-
-    m_bMask = m_pixmaps["background"].mask();
-
-    setMinimumSize(m_pixmaps["background"].size());
-    setMaximumSize(m_pixmaps["background"].size());
+    // Load the current skin
+    loadSkin(settings->value("skin",QString(":/skins/reimu.svg")).toString());
     //    ui->setupUi(this);
 
     retryId = -1;
@@ -121,11 +94,35 @@ TouHouFM::TouHouFM(QWidget *parent) :
     m_menu->addSeparator();
     m_menu->addAction("Login",this,SLOT(login()));
     m_menu->addSeparator();
+    QMenu * smenu = m_menu->addMenu("Skin");
+    m_menu->addSeparator();
     m_menu->addAction("Show",this,SLOT(show()));
     m_menu->addAction("Minimize",this,SLOT(showMinimized()));
     m_menu->addAction("Hide",this,SLOT(hide()));
     m_menu->addSeparator();
     m_menu->addAction("Quit",this,SLOT(close()));
+
+    // List all available skins
+    QDir d(":/skins/");
+
+    QStringList skins = d.entryList(QStringList() << "*.svg");
+
+    foreach(QString skin, skins)
+    {
+        m_skinAssoc[smenu->addAction(skin)] = ":/skins/"+skin;
+    }
+
+    smenu->addSeparator();
+
+    d.setPath("skins/");
+
+    skins = d.entryList(QStringList() << "*.svg");
+
+    foreach(QString skin, skins)
+    {
+        m_skinAssoc[smenu->addAction(skin)] = "skins/"+skin;
+    }
+
 
     setWindowFlags(Qt::Window | Qt::FramelessWindowHint);
 
@@ -158,10 +155,7 @@ TouHouFM::TouHouFM(QWidget *parent) :
     m_systray->show();
 
     connect(m_systray,SIGNAL(activated(QSystemTrayIcon::ActivationReason)),SLOT(systrayActivated(QSystemTrayIcon::ActivationReason)));
-
-    m_f = m_f2 = font();
-    m_f.setPixelSize(m_areas["info"].height()*.8);
-    m_f2.setPixelSize(m_areas["time"].height()*.8);
+    connect(m_menu,SIGNAL(triggered(QAction*)),SLOT(handleAction(QAction*)));
 
     //setAutoFillBackground(false);
     setWindowOpacity(1.0);
@@ -172,7 +166,7 @@ TouHouFM::TouHouFM(QWidget *parent) :
     setAttribute(Qt::WA_TranslucentBackground,true);
     setAttribute(Qt::WA_PaintOnScreen,false);
 
-    play->setVolume(settings->value("volume",play->volume()).toFloat()/100.0);
+    play->setVolume(settings->value("volume",play->volume()).toInt());
 
     animationId = startTimer(20);
     m_fAverageRating = 0;
@@ -364,8 +358,7 @@ void TouHouFM::systrayActivated(QSystemTrayIcon::ActivationReason reason)
 
 void TouHouFM::contextMenuEvent(QContextMenuEvent *event)
 {
-    m_menu->exec(event->globalPos());
-
+    handleAction(m_menu->exec(event->globalPos()));
 }
 
 void TouHouFM::timerEvent(QTimerEvent *event)
@@ -430,7 +423,7 @@ void TouHouFM::paintEvent(QPaintEvent *)
     p.setOpacity(.5);
     p.setBrush(play->isMuted()?Qt::gray : Qt::white);
     p.setPen(Qt::NoPen);
-    p.drawPie(m_areas["volume-inner"],16.0*180.0-16.0*180.0*play->volume()/100,-(16.0*360.0-16.0*180.0*play->volume()/100));
+    p.drawPie(m_areas["volume-inner"],16.0*180.0-16.0*180.0*play->volume()/50,-(16.0*360.0-16.0*180.0*play->volume()/50));
 
     p.setOpacity(.75+.25*(m_areas["volume"].contains(m_pMouse)));
     if(!play->isMuted())
@@ -576,4 +569,59 @@ void TouHouFM::showUrl(QUrl url)
 void TouHouFM::showNotification(QString type, QString text)
 {
     QMessageBox::information(this,"TouHou.FM Radio",type + ": " + text);
+}
+
+void TouHouFM::loadSkin(QString path)
+{
+    QSvgRenderer r(path,this);
+
+    {
+        QStringList items;
+
+        items << "time" << "info" << "rating" << "playpause" << "volume" << "volume-inner" << "report";
+
+        foreach(QString item, items)
+        {
+            m_areas[item] = r.boundsOnElement("rect-"+item);
+        }
+    }
+
+    {
+        QStringList items;
+        items << "background" << "play" << "stop" << "volume" << "volume-mute" << "rating" << "arrow" << "report";
+
+        foreach(QString item, items)
+        {
+            QRectF rc = r.boundsOnElement(item);
+            m_pixmaps[item] = QPixmap(rc.size().toSize());
+            m_pixmaps[item].fill(QColor(0,0,0,0));
+
+            QPainter p2(&m_pixmaps[item]);
+            r.render(&p2,item);
+        }
+    }
+
+    m_sRateStar = m_pixmaps["rating"].size();
+    m_sRateStar.rwidth()  /= 7;
+    m_sRateStar.rheight() /= 2;
+
+    m_bMask = m_pixmaps["background"].mask();
+
+    setMinimumSize(m_pixmaps["background"].size());
+    setMaximumSize(m_pixmaps["background"].size());
+
+    m_f = m_f2 = font();
+    m_f.setPixelSize(m_areas["info"].height()*.8);
+    m_f2.setPixelSize(m_areas["time"].height()*.8);
+
+
+}
+
+void TouHouFM::handleAction(QAction *action)
+{
+    if(m_skinAssoc.contains(action))
+    {
+        loadSkin(m_skinAssoc[action]);
+        settings->setValue("skin",m_skinAssoc[action]);
+    }
 }
