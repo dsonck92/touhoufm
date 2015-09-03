@@ -61,7 +61,7 @@ class TouHouFM : public QFrame
     QBitmap m_bMask;
 
     // TouhouFM connection
-    TouhouFMSocket *m_sInfo;
+    TouhouFMSocket *m_sockInfo;
 
 
     // Status texts
@@ -80,8 +80,6 @@ class TouHouFM : public QFrame
     // Rating options
     QStringList m_slRate;
 
-    // Report "what is wrong" options
-    QStringList m_slWhats;
 
     // Rating
     int m_iRating;
@@ -104,14 +102,23 @@ private slots:
     void sendRating(int rating);
     // send skip request
     void sendSkip();
-    // handle websocket info message
-    void handleMessage(QString info);
     // update volume display
     void volumeChanged(qreal vol);
     // show report dialog and submit
     void report();
     // attempt to login
     void login();
+
+    void newProgress(qreal progress) { m_rProgress = progress; update(); }
+    void newTime(QString time) { m_sTime = time; update(); }
+
+    void newRating(int rating) { m_iRating = rating; update(); }
+
+    void storeAuthToken(QString token);
+
+    void showUrl(QUrl url);
+
+    void showNotification(QString type, QString text);
 
 //    void calculateFFT(QByteArray buff);
 
