@@ -107,6 +107,17 @@ TouHouFM::TouHouFM(QWidget *parent) :
 
     smenu->addSeparator();
 
+#ifdef Q_OS_LINUX
+    d.setPath("/usr/share/touhoufm/skins/");
+
+    skins = d.entryList(QStringList() << "*.svg");
+
+    foreach(QString skin, skins)
+    {
+        m_skinAssoc[smenu->addAction(skin)] = "skins/"+skin;
+    }
+#endif
+
     d.setPath("skins/");
 
     skins = d.entryList(QStringList() << "*.svg");
@@ -565,6 +576,12 @@ void TouHouFM::showNotification(QString type, QString text)
 
 void TouHouFM::loadSkin(QString path)
 {
+    if(!QFile::exists(path))
+    {
+        path = ":/skins/reimu.svg";
+        settings->setValue("skin",path);
+    }
+
     QSvgRenderer r(path,this);
 
     {

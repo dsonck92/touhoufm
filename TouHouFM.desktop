@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=TouHouFM
+GenericName=TouHouFM Radio Player
+Comment=Listen to TouHou.FM
+Exec=TouHouFM %u
+Icon=touhoufm
+Terminal=false
+Type=Application
+Categories=AudioVideo;AudioEditing;Qt;
+Version=1.0
