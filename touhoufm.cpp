@@ -67,24 +67,17 @@ TouHouFM::TouHouFM(QWidget *parent) :
 
     retryId = -1;
 
-    m_menu = new QMenu;
-
+    // Mouse target variable
     m_nTarget = 0;
 
+    // Initialize mediaplayer
     play = new QMediaPlayer(this);
 
-    //    BufferOutput *fout = new BufferOutput();
-
-    //    connect(fout,SIGNAL(newBuffer(QByteArray)),SLOT(calculateFFT(QByteArray)));
-
-    //    play->setAudioOutput(fout);
-
-
-    //    connect(player,SIGNAL(volumeChanged(int)),ui->sliderVolume,SLOT(setValue(int)));
-    //    connect(player,SIGNAL(mutedChanged(bool)),ui->pushMute,SLOT(setChecked(bool)));
+    // Connect the status signal to notify about media states and errors
     connect(play,SIGNAL(mediaStatusChanged(QMediaPlayer::MediaStatus)),SLOT(mediaStatusChanged(QMediaPlayer::MediaStatus)));
 
-    //    connect(player,SIGNAL(bufferStatusChanged(int)),ui->progress,SLOT(setValue(int)));
+    // Create context menu
+    m_menu = new QMenu;
 
     m_menu->addAction("Play",play,SLOT(play()));
     m_menu->addAction("Stop",play,SLOT(stop()));
@@ -123,21 +116,21 @@ TouHouFM::TouHouFM(QWidget *parent) :
         m_skinAssoc[smenu->addAction(skin)] = "skins/"+skin;
     }
 
-
+    // Set the preferred window type, frameless
     setWindowFlags(Qt::Window | Qt::FramelessWindowHint);
 
-    downloadId = startTimer(5000);
+    // Do a default 1fps refresh
     startTimer(1000);
 
-
+    // Load the default url TODO: handle this by querying TouHouFM about actual stream urls
     play->setMedia(QMediaContent(QUrl("http://en.touhou.fm:8010/touhou.mp3")));
 
-    //player->setMedia(QMediaContent(settings->value("url",QUrl("http://en.touhou.fm:8010/touhou.mp3")).toUrl()));
-
+    // If the user kept the state in playing, resume playback on creation
     if(settings->value("state","stopped") == "playing")
     {
         play->play();
     }
+    // If the user hid the window before closing, return hidden
     if(settings->value("shown",true).toBool())
     {
         show();
@@ -147,6 +140,7 @@ TouHouFM::TouHouFM(QWidget *parent) :
         hide();
     }
 
+    // Go into the systemtray
     m_systray = new QSystemTrayIcon(this);
 
     m_systray->setContextMenu(m_menu);
@@ -154,10 +148,11 @@ TouHouFM::TouHouFM(QWidget *parent) :
     setWindowIcon(QIcon(":/images/icon.png"));
     m_systray->show();
 
+    // Handle various interactions with the systemtray
     connect(m_systray,SIGNAL(activated(QSystemTrayIcon::ActivationReason)),SLOT(systrayActivated(QSystemTrayIcon::ActivationReason)));
-    connect(m_menu,SIGNAL(triggered(QAction*)),SLOT(handleAction(QAction*)));
+    connect(smenu,SIGNAL(triggered(QAction*)),SLOT(handleAction(QAction*)));
 
-    //setAutoFillBackground(false);
+    // Create a semi transparent window
     setWindowOpacity(1.0);
     QPalette pal = palette();
     pal.setColor(backgroundRole(),QColor(0,0,0,0));
@@ -166,16 +161,16 @@ TouHouFM::TouHouFM(QWidget *parent) :
     setAttribute(Qt::WA_TranslucentBackground,true);
     setAttribute(Qt::WA_PaintOnScreen,false);
 
+    // Restore the volume of last session
     play->setVolume(settings->value("volume",play->volume()).toInt());
 
+    // Create our animation timer
     animationId = startTimer(20);
     m_fAverageRating = 0;
 }
 
 TouHouFM::~TouHouFM()
 {
-    //   settings->setValue("volume",ui->sliderVolume->value());
-    //   settings->setValue("shown",isVisible());
     settings->setValue("volume",play->volume());
 
     //    delete ui;
@@ -184,6 +179,7 @@ TouHouFM::~TouHouFM()
 
 void TouHouFM::mediaStatusChanged(QMediaPlayer::MediaStatus status)
 {
+    // Update the status message
     switch(status)
     {
     case QMediaPlayer::UnknownMediaStatus:
@@ -328,7 +324,7 @@ void TouHouFM::metaDataChanged(QString field, QVariant value)
 
     if(field == "progress")
     {
-
+        m_rProgress = value.toFloat();
         //        ui->progress->setValue(value.toFloat());
     }
     else if(field == "user-rating")
@@ -486,17 +482,13 @@ void TouHouFM::paintEvent(QPaintEvent *)
     {
         p.drawText(m_statusTextSize,text);
     }
-    p.setPen(QPen(Qt::red,2));
-    p.drawLine(QPointF(28+1,416-3),QPointF(28+1+(380-1-1-28)*m_rProgress/100.0,416-3));
+    p.setPen(QPen(QColor::fromRgb(0,64,128),2));
+    p.drawLine(renderRect.bottomLeft()+QPointF(1,-3),renderRect.bottomLeft()+QPointF(1+renderRect.width()*m_rProgress/100.0,-3));
 
     p.setPen(Qt::black);
     p.setFont(m_f2);
     p.setClipRect(m_areas["time"]);
     p.drawText(m_areas["time"],m_sTime);
-    //    for(int i = renderRect.left();i < renderRect.right();i++)
-    //    {
-    //p.drawLine(QPointF(i,renderRect.bottom()),QPointF(i,renderRect.bottom()-renderRect.height()*fo[i]));
-    //    }
 }
 
 void TouHouFM::sendRequest()

@@ -4,5 +4,6 @@
     </qresource>
     <qresource prefix="/skins">
         <file>reimu.svg</file>
+        <file>streaming.svg</file>
     </qresource>
 </RCC>
