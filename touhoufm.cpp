@@ -56,7 +56,7 @@ TouHouFM::TouHouFM(QWidget *parent) :
     connect(m_sockInfo,SIGNAL(newGlobalRating(qreal)),SLOT(newGlobalRating(qreal)));
 
     // Initialize the ratings options TODO: Should be handled through TouHouFM to sync between client and site
-    m_slRate << "Awful" << "Terrible" << "Bad" << "Neutral" << "Good" << "Nice" << "Awesome";
+    m_slRate << tr("Awful") << tr("Terrible") << tr("Bad") << tr("Neutral") << tr("Good") << tr("Nice") << tr("Awesome");
 
     // Last status message time set to now
     m_last = QTime::currentTime();
@@ -79,21 +79,21 @@ TouHouFM::TouHouFM(QWidget *parent) :
     // Create context menu
     m_menu = new QMenu;
 
-    m_menu->addAction("Play",play,SLOT(play()));
-    m_menu->addAction("Stop",play,SLOT(stop()));
+    m_menu->addAction(tr("Play"),play,SLOT(play()));
+    m_menu->addAction(tr("Stop"),play,SLOT(stop()));
     m_menu->addSeparator();
-    m_menu->addAction("Report",this,SLOT(report()));
-    m_menu->addAction("Skip",m_sockInfo,SLOT(skipSong()));
+    m_menu->addAction(tr("Report"),this,SLOT(report()));
+    m_menu->addAction(tr("Skip"),m_sockInfo,SLOT(skipSong()));
     m_menu->addSeparator();
-    m_menu->addAction("Login",this,SLOT(login()));
+    m_menu->addAction(tr("Login"),this,SLOT(login()));
     m_menu->addSeparator();
-    QMenu * smenu = m_menu->addMenu("Skin");
+    QMenu * smenu = m_menu->addMenu(tr("Skin"));
     m_menu->addSeparator();
-    m_menu->addAction("Show",this,SLOT(show()));
-    m_menu->addAction("Minimize",this,SLOT(showMinimized()));
-    m_menu->addAction("Hide",this,SLOT(hide()));
+    m_menu->addAction(tr("Show"),this,SLOT(show()));
+    m_menu->addAction(tr("Minimize"),this,SLOT(showMinimized()));
+    m_menu->addAction(tr("Hide"),this,SLOT(hide()));
     m_menu->addSeparator();
-    m_menu->addAction("Quit",this,SLOT(close()));
+    m_menu->addAction(tr("Quit"),this,SLOT(close()));
 
     // List all available skins
     QDir d(":/skins/");
@@ -183,33 +183,33 @@ void TouHouFM::mediaStatusChanged(QMediaPlayer::MediaStatus status)
     switch(status)
     {
     case QMediaPlayer::UnknownMediaStatus:
-        m_sStatus = "Unknown";
+        m_sStatus = tr("Unknown");
         //        ui->labelInfo->setText("Unknown");
         break;
     case QMediaPlayer::NoMedia:
-        m_sStatus = "No Media!";
+        m_sStatus = tr("No Media!");
         break;
     case QMediaPlayer::LoadingMedia:
-        m_sStatus = "Loading ...";
+        m_sStatus = tr("Loading ...");
         break;
     case QMediaPlayer::LoadedMedia:
-        m_sStatus = "Loaded!";
+        m_sStatus = tr("Loaded!");
         break;
     case QMediaPlayer::StalledMedia:
-        m_sStatus = "Stalled!";
+        m_sStatus = tr("Stalled!");
         break;
     case QMediaPlayer::BufferingMedia:
-        m_sStatus = "Buffering...";
+        m_sStatus = tr("Buffering...");
         break;
     case QMediaPlayer::BufferedMedia:
-        m_sStatus = "Buffered";
+        m_sStatus = tr("Buffered");
         break;
     case QMediaPlayer::EndOfMedia:
-        m_sStatus = "Done!";
+        m_sStatus = tr("Done!");
         retryId = startTimer(3000);
         break;
     case QMediaPlayer::InvalidMedia:
-        m_sStatus = "Invalid Media!";
+        m_sStatus = tr("Invalid Media!");
         retryId = startTimer(3000);
         break;
 
@@ -252,7 +252,7 @@ void TouHouFM::mousePressEvent(QMouseEvent *event) {
             if(pos.contains(event->pos()))
             {
                 sendRating(i);
-                m_sStatus = QString("Rating: %1").arg(m_slRate[i]);
+                m_sStatus = tr("Rating: %1").arg(m_slRate[i]);
                 m_last = QTime::currentTime();
             }
             else
@@ -306,7 +306,7 @@ void TouHouFM::metaDataChanged(QString field, QVariant value)
 {
     meta[field] = value;
 
-    QString status = QString("%1 by %2 from %3 << %4 >>").arg(meta.value("Title",QString("~")).toString())
+    QString status = tr("%1 by %2 from %3 << %4 >>").arg(meta.value("Title",QString("~")).toString())
             .arg(meta.value("Artist",QString("~")).toString())
             .arg(meta.value("Album",QString("~")).toString())
             .arg(meta.value("Circle",QString("~")).toString());
@@ -316,7 +316,7 @@ void TouHouFM::metaDataChanged(QString field, QVariant value)
         m_sInfo = status;
         update();
         //        ui->labelInfo->setText(status);
-        m_systray->showMessage("Now Playing:",QString("Title: %1\nArtist: %2\nAlbum: %3\nCircle: %4").arg(meta.value("Title",QString("~")).toString())
+        m_systray->showMessage(tr("Now Playing:"),tr("Title: %1\nArtist: %2\nAlbum: %3\nCircle: %4").arg(meta.value("Title",QString("~")).toString())
                                .arg(meta.value("Artist",QString("~")).toString())
                                .arg(meta.value("Album",QString("~")).toString())
                                .arg(meta.value("Circle",QString("~")).toString()));
@@ -502,7 +502,7 @@ void TouHouFM::sendRating(int rating)
 
 void TouHouFM::volumeChanged(qreal vol)
 {
-    m_sStatus = QString("Volume: %1%").arg(vol*100.0,0,'f',1);
+    m_sStatus = tr("Volume: %1%").arg(vol*100.0,0,'f',1);
     m_last = QTime::currentTime();
 }
 
@@ -516,7 +516,7 @@ void TouHouFM::wheelEvent(QWheelEvent *event)
 
 void TouHouFM::report()
 {
-    Report box("TouHou.FM",QString("Reporting %1 by %2 from %3 << %4 >>").arg(meta.value("Title",QString("~")).toString())
+    Report box("TouHou.FM",tr("Reporting %1 by %2 from %3 << %4 >>").arg(meta.value("Title",QString("~")).toString())
                .arg(meta.value("Artist",QString("~")).toString())
                .arg(meta.value("Album",QString("~")).toString())
                .arg(meta.value("Circle",QString("~")).toString()),m_sockInfo->getWhats());
@@ -551,7 +551,7 @@ void TouHouFM::showUrl(QUrl url)
 {
     QDesktopServices::openUrl(url);
 
-    if(QMessageBox::question(this,"TouhouFM Radio","Please authorize and click Ok when ready.",QMessageBox::Ok,QMessageBox::NoButton) == QMessageBox::Ok)
+    if(QMessageBox::question(this,tr("Touhou.FM Radio"),tr("Please authorize and click Ok when ready."),QMessageBox::Ok,QMessageBox::NoButton) == QMessageBox::Ok)
     {
         m_sockInfo->login();
     }
@@ -560,7 +560,7 @@ void TouHouFM::showUrl(QUrl url)
 
 void TouHouFM::showNotification(QString type, QString text)
 {
-    QMessageBox::information(this,"TouHou.FM Radio",type + ": " + text);
+    QMessageBox::information(this,tr("TouHou.FM Radio"),type + ": " + text);
 }
 
 void TouHouFM::loadSkin(QString path)

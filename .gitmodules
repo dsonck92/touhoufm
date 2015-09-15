@@ -1,0 +1,3 @@
+[submodule "touhoufmsocket"]
+	path = touhoufmsocket
+	url = https://github.com/dsonck92/touhoufmsocket.git

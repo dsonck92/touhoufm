@@ -1,10 +1,17 @@
 #include "touhoufm.h"
 #include <QApplication>
+#include <QTranslator>
 
 int main(int argc, char *argv[])
 {
     // Create the application object
     QApplication a(argc, argv);
+
+    QString locale = QLocale::system().name();
+
+    QTranslator translator;
+    translator.load(QString("touhoufm_") + locale);
+    a.installTranslator(&translator);
 
     // Set the global application details like company and app name
     a.setOrganizationName("TouHou.FM");

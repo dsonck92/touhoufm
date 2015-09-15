@@ -1,7 +1,7 @@
 #ifndef TOUHOUFM_H
 #define TOUHOUFM_H
 
-#include "touhoufmsocket.h"
+#include "touhoufmsocket/touhoufmsocket.h"
 
 #include <QFrame>
 #include <QMediaPlayer>

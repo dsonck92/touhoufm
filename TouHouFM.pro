@@ -4,6 +4,8 @@
 #
 #-------------------------------------------------
 
+include(touhoufmsocket/touhoufmsocket.pri)
+
 QT       += core gui
 QT       += websockets multimedia
 QT       += svg
@@ -22,12 +24,10 @@ TEMPLATE = app
 
 SOURCES += main.cpp\
         touhoufm.cpp \
-    report.cpp \
-    touhoufmsocket.cpp
+    report.cpp
 
 HEADERS  += touhoufm.h \
-    report.h \
-    touhoufmsocket.h
+    report.h
 
 FORMS    += \
     report.ui
@@ -35,5 +35,8 @@ FORMS    += \
 RESOURCES += \
     resource.qrc
 
+TRANSLATIONS += \
+    touhoufm_nl.ts \
+    touhoufm_ja.ts
 
 INSTALLS += target
