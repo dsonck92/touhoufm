@@ -19,6 +19,12 @@ isEmpty(PREFIX) {
 
 target.path = $$PREFIX/bin
 
+desktop.path = $$PREFIX/share/applications
+desktop.files = TouHouFM.desktop
+
+icons.path = $$PREFIX/share/icons/hicolor/
+icons.files = hicolor/*
+
 TEMPLATE = app
 
 
@@ -39,4 +45,9 @@ TRANSLATIONS += \
     touhoufm_nl.ts \
     touhoufm_ja.ts
 
-INSTALLS += target
+INSTALLS += target \
+            desktop \
+            icons
+
+DISTFILES += \
+    TouHouFM.desktop
